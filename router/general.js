@@ -5,10 +5,22 @@ let users = require("./auth_users.js").users;
 const public_users = express.Router();
 
 
-public_users.post("/register", (req,res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
-});
+public_users.post("/register", (req, res) => {
+    const { username, password } = req.body;
+  
+    if (!username || !password) {
+      return res.status(400).json({ message: "Le nom d'utilisateur et le mot de passe sont requis." });
+    }
+  
+    if (isValid(username)) {
+      return res.status(409).json({ message: "Le nom d'utilisateur existe déjà." });
+    }
+  
+    users.push({ username, password });
+    return res.status(201).json({ message: "Utilisateur enregistré avec succès !" });
+  });
+  
+
 
 // Get the book list available in the shop
 public_users.get('/',function (req, res) {
@@ -58,7 +70,19 @@ public_users.get('/title/:title',function (req, res) {
 //  Get book review
 public_users.get('/review/:isbn',function (req, res) {
   //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+  
+    const isbn = req.params.isbn;
+    const book = books[isbn];
+  
+    if (book) {
+      if (Object.keys(book.reviews).length > 0) {
+        res.status(200).json(book.reviews);
+      } else {
+        res.status(404).json({ message: "No reviews found for ISBN " + isbn });
+      }
+    } else {
+      res.status(404).json({ message: "Book not found with ISBN " + isbn });
+    }
 });
 
 module.exports.general = public_users;

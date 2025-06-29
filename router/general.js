@@ -61,27 +61,28 @@ public_users.get('/', async function (req, res) {
 });
   
 
+
+
 public_users.get('/axios/isbn/:isbn', async (req, res) => {
-    const isbn = req.params.isbn;
-  
-    try {
-      if (books[isbn]) {
-        return res.status(200).json({
-          success: true,
-          message: "Livre trouvé",
-          book: books[isbn]
-        });
-      } else {
-        return res.status(404).json({
-          success: false,
-          message: "Livre non trouvé"
-        });
-      }
-    } catch (error) {
-      console.error("Erreur Axios:", error.message);
-      res.status(500).json({ success: false, message: "Erreur serveur" });
-    }
-  });
+  const { isbn } = req.params;
+
+  try {
+    const response = await axios.get(`https://maximemarcel-5000.theianext-1-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/isbn/${isbn}`);
+
+    res.status(200).json({
+      success: true,
+      message: `Détails du livre pour ISBN ${isbn} récupérés avec Axios`,
+      book: response.data
+    });
+  } catch (error) {
+    console.error("Erreur Axios ISBN:", error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: "Erreur serveur ou livre introuvable" 
+    });
+  }
+});
+
     
   
 

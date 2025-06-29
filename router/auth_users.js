@@ -1,13 +1,14 @@
+// expressBookReviews/users.js
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 let books = require("./booksdb.js");
 const regd_users = express.Router();
 
-// Enhanced user storage with password hashing
+// In-memory user store
 let users = [];
 
-// Add sample user with hashed password
+// Add a sample user on startup
 const createSampleUser = async () => {
   const hashedPassword = await bcrypt.hash("123456", 10);
   users.push({
@@ -17,20 +18,21 @@ const createSampleUser = async () => {
 };
 createSampleUser();
 
-// Utility functions
+// Utility: check if username exists
 const isValid = (username) => users.some(user => user.username === username);
 
+// Utility: check if credentials match
 const authenticatedUser = async (username, password) => {
   const user = users.find(u => u.username === username);
   if (!user) return false;
   return await bcrypt.compare(password, user.password);
 };
 
-// JWT Authentication Middleware
+// Middleware: validate JWT
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
+
   if (!token) {
     return res.status(401).json({ 
       success: false,
@@ -39,7 +41,7 @@ const authenticateToken = (req, res, next) => {
     });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || "fallback_secret_key", (err, user) => {
+  jwt.verify(token, "fallback_secret_key", (err, user) => {
     if (err) {
       return res.status(403).json({ 
         success: false,
@@ -52,7 +54,7 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Login endpoint
+// POST /customer/login
 regd_users.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -75,8 +77,8 @@ regd_users.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { username }, 
-      process.env.JWT_SECRET || "fallback_secret_key", 
+      { username },
+      "fallback_secret_key",
       { expiresIn: "1h" }
     );
 
@@ -86,7 +88,6 @@ regd_users.post("/login", async (req, res) => {
       token,
       username
     });
-
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).json({
@@ -97,12 +98,12 @@ regd_users.post("/login", async (req, res) => {
   }
 });
 
-// Review endpoint
+// PUT /customer/auth/review/:isbn
 regd_users.put("/auth/review/:isbn", authenticateToken, (req, res) => {
   try {
     const { isbn } = req.params;
     const { review } = req.body;
-    const username = req.user.username; // From verified token
+    const username = req.user.username;
 
     if (!review) {
       return res.status(400).json({
@@ -120,19 +121,17 @@ regd_users.put("/auth/review/:isbn", authenticateToken, (req, res) => {
       });
     }
 
-    // Add or update review
+    if (!books[isbn].reviews) {
+      books[isbn].reviews = {};
+    }
+
     books[isbn].reviews[username] = review;
 
     return res.status(200).json({
       success: true,
       message: "Review added/updated successfully",
-      data: {
-        isbn,
-        username,
-        review
-      }
+      data: { isbn, username, review }
     });
-
   } catch (error) {
     console.error("Review error:", error);
     return res.status(500).json({
@@ -143,9 +142,54 @@ regd_users.put("/auth/review/:isbn", authenticateToken, (req, res) => {
   }
 });
 
+// Suppression d'une critique
+regd_users.delete("/auth/review/:isbn", authenticateToken, (req, res) => {
+    try {
+      const { isbn } = req.params;
+      const username = req.user.username;
+  
+      if (!books[isbn]) {
+        return res.status(404).json({
+          success: false,
+          error: "BOOK_NOT_FOUND",
+          message: "Livre non trouvé"
+        });
+      }
+  
+      if (!books[isbn].reviews || !books[isbn].reviews[username]) {
+        return res.status(404).json({
+          success: false,
+          error: "REVIEW_NOT_FOUND",
+          message: "Critique de cet utilisateur non trouvée"
+        });
+      }
+  
+      // Suppression de la critique utilisateur
+      delete books[isbn].reviews[username];
+  
+      return res.status(200).json({
+        success: true,
+        message: "Critique supprimée avec succès",
+        data: {
+          isbn,
+          username
+        }
+      });
+    } catch (error) {
+      console.error("Delete review error:", error);
+      return res.status(500).json({
+        success: false,
+        error: "SERVER_ERROR",
+        message: "Erreur serveur interne"
+      });
+    }
+  });
+  
+
 module.exports = {
   authenticated: regd_users,
   isValid,
   users,
   authenticatedUser
 };
+

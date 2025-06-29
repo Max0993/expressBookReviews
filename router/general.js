@@ -101,6 +101,30 @@ public_users.get('/author/:author',function (req, res) {
 });
 
 
+public_users.get('/axios/author/:author', async (req, res) => {
+    const searchTerm = req.params.author.toLowerCase();
+    try {
+        const response = await axios.get('https://maximemarcel-5000.theianext-1-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai//books/data'); // ✅ utilisez le port local ici
+        const books = response.data;
+        const results = Object.entries(books).reduce((acc, [id, book]) => {
+            if (book.author.toLowerCase().includes(searchTerm)) {
+                acc.push({ id, ...book });
+            }
+            return acc;
+        }, []);
+        if (results.length > 0) {
+            res.status(200).json({ count: results.length, books: results });
+        } else {
+            res.status(404).json({ message: `Aucun livre trouvé pour l’auteur "${req.params.author}"` });
+        }
+    } catch (error) {
+        console.error("Erreur Axios:", error.message);
+        res.status(500).json({ success: false, message: "Erreur serveur" });
+    }
+});
+  
+
+
 public_users.get('/title/:title',function (req, res) {
     const searchTerm = req.params.title.toLowerCase();
     const results = Object.entries(books)
@@ -115,6 +139,35 @@ public_users.get('/title/:title',function (req, res) {
         ? res.json({ count: results.length, books: results })
         : res.status(404).json({ message: `Title "${req.params.title}" non trouvé` });
 });
+
+
+public_users.get('/axios/title/:title', async (req, res) => {
+    const searchTerm = req.params.title.toLowerCase();
+
+    try {
+        const response = await axios.get('https://maximemarcel-5000.theianext-1-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/books/data');
+        const books = response.data;
+
+        const results = Object.entries(books)
+            .reduce((acc, [id, book]) => {
+                if (book.title.toLowerCase().includes(searchTerm)) {
+                    acc.push({ id, ...book });
+                }
+                return acc;
+            }, []);
+
+        if (results.length > 0) {
+            res.status(200).json({ count: results.length, books: results });
+        } else {
+            res.status(404).json({ message: `Aucun livre trouvé avec le titre "${req.params.title}"` });
+        }
+    } catch (error) {
+        console.error("Erreur Axios:", error.response?.data || error.message);
+        res.status(500).json({ success: false, message: "Erreur serveur" });
+    }
+});
+
+
 
 
 public_users.get('/review/:isbn',function (req, res) {

@@ -6,14 +6,14 @@ const genl_routes = require('./router/general.js').general;
 const app = express();
 app.use(express.json());
 
-// Middleware d'authentification JWT pour toutes les routes commençant par /customer/auth/*
+
 app.use("/customer/auth/*", (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
     return res.status(403).json({ message: "User not logged in" });
   }
 
-  const token = authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader.split(' ')[1]; 
 
   jwt.verify(token, process.env.JWT_SECRET || "fallback_secret_key", (err, user) => {
     if (err) {

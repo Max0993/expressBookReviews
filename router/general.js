@@ -3,7 +3,7 @@ let books = require("./booksdb.js");
 let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
 const public_users = express.Router();
-
+const axios = require('axios');
 
 public_users.post("/register", (req, res) => {
     const { username, password } = req.body;
@@ -28,14 +28,63 @@ public_users.get('/',function (req, res) {
 
 });
 
-// Get book details based on ISBN
-public_users.get('/isbn/:isbn',function (req, res) {
-  //Write your code here
-    res.status(200).json(Object.keys(books));
+
+public_users.get('/books/data', (req, res) => {
+  res.status(200).json(books);
+});
+
+
+public_users.get('/', async function (req, res) {
+  try {
+    const response = await axios.get('https://maximemarcel-5000.theianext-1-labs-prod-misc-tools-us-east-0.proxy.cognitiveclass.ai/books/data');
+    res.status(200).json({
+      success: true,
+      message: "Liste des livres récupérée avec Axios",
+      books: response.data
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération avec Axios:", error.message);
+    res.status(500).json({ success: false, message: "Erreur serveur" });
+  }
+});
+
+
+  public_users.get('/isbn/:isbn', (req, res) => {
+    const isbn = req.params.isbn;
+
+    const book = books[isbn];
+    if (book) {
+        res.status(200).json(book);
+    } else {
+        res.status(404).json({ message: "Livre non trouvé" });
+    }
+});
+  
+
+public_users.get('/axios/isbn/:isbn', async (req, res) => {
+    const isbn = req.params.isbn;
+  
+    try {
+      if (books[isbn]) {
+        return res.status(200).json({
+          success: true,
+          message: "Livre trouvé",
+          book: books[isbn]
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: "Livre non trouvé"
+        });
+      }
+    } catch (error) {
+      console.error("Erreur Axios:", error.message);
+      res.status(500).json({ success: false, message: "Erreur serveur" });
+    }
   });
+    
   
-  
-// Get book details based on author
+
 public_users.get('/author/:author',function (req, res) {
     const searchTerm = req.params.author.toLowerCase();
     const results = Object.entries(books)
@@ -51,7 +100,7 @@ public_users.get('/author/:author',function (req, res) {
         : res.status(404).json({ message: `Auteur "${req.params.author}" non trouvé` });
 });
 
-// Get all books based on title
+
 public_users.get('/title/:title',function (req, res) {
     const searchTerm = req.params.title.toLowerCase();
     const results = Object.entries(books)
@@ -67,7 +116,7 @@ public_users.get('/title/:title',function (req, res) {
         : res.status(404).json({ message: `Title "${req.params.title}" non trouvé` });
 });
 
-//  Get book review
+
 public_users.get('/review/:isbn',function (req, res) {
   //Write your code here
   
